@@ -11,9 +11,10 @@ set -e
 
 # report on time & echo
 echo_with_time(){
-  LEND=$(date +%s)
-  LDIFF=$(($LEND - $START))
-  echo "-----> $(date -d@$LDIFF -u +%H:%M:%S) ----| $(1)"
+  local msg=${1}
+  local LEND=$(date +%s)
+  local LDIFF=$(($LEND - $START))
+  echo "-----> $(date -d@$LDIFF -u +%H:%M:%S) ----| $(msg)"
 }
 
 # Load config vars into environment (from https://devcenter.heroku.com/articles/buildpack-api)
