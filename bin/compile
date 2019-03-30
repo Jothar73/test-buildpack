@@ -9,6 +9,13 @@ set -e
 # debug verbosely.
 #set -x
 
+# report on time & echo
+echo_with_time(){
+  LEND=$(date +%s)
+  LDIFF=$(($LEND - $START))
+  echo "-----> $(date -d@$LDIFF -u +%H:%M:%S) ----| $(1)"
+}
+
 # Load config vars into environment (from https://devcenter.heroku.com/articles/buildpack-api)
 export_env_dir() {
   env_dir=$1
@@ -33,6 +40,7 @@ fi
 
 # Save the start time to calculate execution time
 START=$(date +%s)
+echo_with_time "Started"
 
 # Get the path to dir one above this file.
 BUILDPACK_DIR=$(cd -P -- "$(dirname -- "$0")" && cd .. && pwd -P)
@@ -40,7 +48,7 @@ BUILDPACK_DIR=$(cd -P -- "$(dirname -- "$0")" && cd .. && pwd -P)
 APP_CHECKOUT_DIR=$1
 CACHE_DIR=$2
 if [ -n "$BUILDPACK_CLEAR_CACHE" ]; then
-  echo "-----> Clearing cache dir."
+  echo_with_time "Clearing cache dir."
   rm -rf "$CACHE_DIR/*"
 fi
 
@@ -62,7 +70,7 @@ if [ ! -d "$APP_SOURCE_DIR/.meteor" ] && [ -d "$APP_SOURCE_DIR/app/.meteor" ]; t
   APP_SOURCE_DIR="$APP_SOURCE_DIR/app/"
 fi
 if [ ! -d "$APP_SOURCE_DIR/.meteor" ]; then
-  echo "FATAL: Can't find meteor app. Set METEOR_APP_DIR to the relative location of the meteor app within your repository if it's not in the root or 'app/' subdirectory.  (Tried ${APP_SOURCE_DIR})"
+  echo_with_time "FATAL: Can't find meteor app. Set METEOR_APP_DIR to the relative location of the meteor app within your repository if it's not in the root or 'app/' subdirectory.  (Tried ${APP_SOURCE_DIR})"
   exit 1
 fi
 
@@ -89,7 +97,7 @@ if [ -z "$ROOT_URL" ] && [ -n "$HEROKU_APP_NAME" ] ; then
   export ROOT_URL="https://${HEROKU_APP_NAME}.herokuapp.com"
 fi
 if [ -z "$ROOT_URL" ] ; then
-  echo "FATAL: ROOT_URL is not defined."
+  echo_with_time "FATAL: ROOT_URL is not defined."
   exit 1
 fi
 
@@ -100,9 +108,9 @@ fi
 # Install the latest meteor, and rely on meteor to upgrade/downgrade itself to
 # the .meteor/release target.
 if [ -e "$METEOR_DIR/.meteor/meteor" ]; then
-  echo "-----> Existing meteor installation found, using it."
+  echo_with_time "Existing meteor installation found, using it."
 else
-  echo "-----> Installing meteor"
+  echo_with_time "Installing meteor"
   curl -sS "https://install.meteor.com/" | HOME="$METEOR_DIR" /bin/sh
 fi
 # Function to execute meteor with proper HOME.
@@ -120,11 +128,11 @@ function METEOR {
 # than the "latest" that is installed by install.meteor.com.
 cd "$APP_SOURCE_DIR"
 
-echo "-----> Target Meteor version: `METEOR --version`"
+echo_with_time "Target Meteor version: `METEOR --version`"
 
 # Deal with non-server build targets.  Determine if we have --server-only flag
 # capability (Meteor 1.3 and up).
-echo "-----> Checking if this meteor version supports --server-only"
+echo_with_time "Checking if this meteor version supports --server-only"
 # Allow non-zero return from grep.
 set +e
 HAS_SERVER_ONLY=`METEOR help build | grep -e '--server-only'`
@@ -137,9 +145,9 @@ fi
 # Remove the Android platform if we don't support the --server-only flag
 # (Meteor 1.2 and below).  iOS platform gets ignored properly.
 if [ -z "$SERVER_ONLY_FLAG" ]; then
-  echo "-----> Attempting to remove android platform."
+  echo_with_time "Attempting to remove android platform."
   METEOR remove-platform android || true
-  echo "-----> Moving on."
+  echo_with_time "Moving on."
 fi
 
 # Identify the npm/node to use. We need to copy the node binary out to get the
@@ -167,15 +175,15 @@ chmod a+x "$NODE"
 # Add npm and node path so that 1.4's npm-rebuild.js will function.
 PATH="$METEOR_DIR/.meteor:`dirname $METEOR_NPM`:$COMPILE_DIR/bin:$PATH"
 
-echo "-----> Using node: `$NODE --version`"
-echo "----->    and npm: `$METEOR_NPM --version`"
+echo_with_time "Using node: `$NODE --version`"
+echo_with_time "    and npm: `$METEOR_NPM --version`"
 
 # If we use npm on root, run npm install.  Don't use `--production` here, as we
 # may need devDependencies (e.g. webpack) in order to build the meteor app.
 if [ -e "$APP_SOURCE_DIR"/package.json ]; then
   mkdir -p "$CACHE_DIR/meteor-dev-modules"
   if [ -n "$(ls -A $CACHE_DIR/meteor-dev-modules)" ]; then
-    echo "-----> Reusing development node_modules cache"
+    echo_with_time "Reusing development node_modules cache"
     mkdir -p "$APP_SOURCE_DIR/node_modules"
     mv "$CACHE_DIR/meteor-dev-modules/*" "$APP_SOURCE_DIR/node_modules"
   fi
@@ -185,9 +193,9 @@ fi
 
 # INSTALL GIT PACKAGES
 if [ -e "$APP_SOURCE_DIR"/git-packages.json ]; then
-  echo "-----> Installing mgp"
+  echo_with_time "Installing mgp"
   $METEOR_NPM install -g mgp
-  echo "-----> Installing the packages"
+  echo_with_time "Installing the packages"
   mgp --https
 fi
 
@@ -196,7 +204,7 @@ fi
 # assets at runtime, and thus they are not available for bundling unless meteor
 # has been launched.  To opt-in to this, set BUILDPACK_PRELAUNCH_METEOR=1.
 if [ -n "$BUILDPACK_PRELAUNCH_METEOR" ]; then
-  echo "-----> BUILDPACK_PRELAUNCH_METEOR: Pre-launching meteor to build packages assets"
+  echo_with_time "BUILDPACK_PRELAUNCH_METEOR: Pre-launching meteor to build packages assets"
   # Remove the Android platform because it fails due to the Android tools not
   # being installed, but leave the iOS platform because it's ignored.
   METEOR remove-platform android || true
@@ -206,29 +214,29 @@ fi
 # Now on to bundling. Don't put the bundle in $APP_CHECKOUT_DIR during
 # bundling, or it will recurse, trying to bundle up its own bundling.
 
-echo "-----> Building Meteor app with ROOT_URL: $ROOT_URL"
+echo_with_time "Building Meteor app with ROOT_URL: $ROOT_URL"
 BUNDLE_DEST=`mktemp -d "$BUILDPACK_DIR/build-XXXX"`
 
 # The actual invocation of `meteor build`!
 mkdir -p "$CACHE_DIR/meteor-build"
 rm -rf "$APP_SOURCE_DIR"/.meteor/local
 if [ -n "$(ls -A $CACHE_DIR/meteor-build)" ]; then
-  echo "-----> Reusing meteor build cache"
+  echo_with_time "Reusing meteor build cache"
 fi
 ln -s "$CACHE_DIR/meteor-build" "$APP_SOURCE_DIR/.meteor/local"
 METEOR build $BUILD_OPTIONS --server $ROOT_URL $SERVER_ONLY_FLAG --directory $BUNDLE_DEST
 
-echo "-----> Moving built slug to $COMPILE_DIR/app"
+echo_with_time "Moving built slug to $COMPILE_DIR/app"
 mv $BUNDLE_DEST/bundle "$COMPILE_DIR/app"
 rmdir $BUNDLE_DEST
 
 # Run npm install on the built slug; only for '--production' dependencies.
-echo "-----> Installing npm production dependencies on built slug"
+echo_with_time "Installing npm production dependencies on built slug"
 if [ -e "$COMPILE_DIR"/app/programs/server/package.json ]; then
   cd "$COMPILE_DIR"/app/programs/server
   mkdir -p "$CACHE_DIR/meteor-prod-modules"
   if [ -n "$(ls -A $CACHE_DIR/meteor-prod-modules)" ]; then
-    echo "-----> Reusing production node_modules cache"
+    echo_with_time "Reusing production node_modules cache"
   fi
   mv "$CACHE_DIR/meteor-prod-modules/*" "$COMPILE_DIR/app/programs/server/node_modules" &> /dev/null || true
   rm -rf "$CACHE_DIR/meteor-prod-modules"
@@ -241,7 +249,7 @@ fi
 # Environment
 #
 # Add an export of PATH which includes our compile dir, etc.
-echo "-----> Adding PATH environment"
+echo_with_time "Adding PATH environment"
 mkdir -p "$APP_CHECKOUT_DIR"/.profile.d
 cat > "$APP_CHECKOUT_DIR"/.profile.d/path.sh <<EOF
   #!/bin/sh
@@ -255,7 +263,7 @@ EOF
 
 # source scripts in 'extra' dir, if any.  Create them for custom stuff like
 # binary dependencies, additional environment settings, etc.
-echo "-----> Running extras"
+echo_with_time "Running extras"
 for file in `ls "$BUILDPACK_DIR"/extra | sort`; do
   . "$BUILDPACK_DIR"/extra/$file
 done
@@ -264,7 +272,7 @@ done
 # Clear cache after build is done
 #
 if [ -n "$BUILDPACK_CLEAR_CACHE" ]; then
-  echo "-----> Clearing cache dir."
+  echo_with_time "Clearing cache dir."
   rm -rf $METEOR_DIR
   rm -rf "$CACHE_DIR/*"
 fi
@@ -273,4 +281,4 @@ fi
 END=$(date +%s)
 DIFF=$(($END - $START))
 # This date call doesn't work on macOS. Using BSD, it would be $(date -r $DIFF -u +%H:%M:%S)
-echo "-----> Build duration: $(date -d@$DIFF -u +%H:%M:%S)"
+echo_with_time "Build duration: $(date -d@$DIFF -u +%H:%M:%S)"
