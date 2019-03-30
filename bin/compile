@@ -6,8 +6,6 @@
 
 # fail fast.
 set -e
-# debug verbosely.
-set -x
 
 # Save the start time to calculate execution time
 START=$(date +%s)
@@ -50,7 +48,7 @@ BUILDPACK_DIR=$(cd -P -- "$(dirname -- "$0")" && cd .. && pwd -P)
 APP_CHECKOUT_DIR=$1
 CACHE_DIR=$2
 if [ -n "${BUILDPACK_CLEAR_CACHE}" ]; then
-  echo_with_time "-----> Clearing cache dir."
+  echo_with_time "Clearing cache dir."
   rm -rf "$CACHE_DIR/*"
 fi
 
@@ -72,7 +70,7 @@ if [ ! -d "$APP_SOURCE_DIR/.meteor" ] && [ -d "$APP_SOURCE_DIR/app/.meteor" ]; t
   APP_SOURCE_DIR="$APP_SOURCE_DIR/app/"
 fi
 if [ ! -d "$APP_SOURCE_DIR/.meteor" ]; then
-  echo "FATAL: Can't find meteor app. Set METEOR_APP_DIR to the relative location of the meteor app within your repository if it's not in the root or 'app/' subdirectory.  (Tried ${APP_SOURCE_DIR})"
+  echo_with_time "FATAL: Can't find meteor app. Set METEOR_APP_DIR to the relative location of the meteor app within your repository if it's not in the root or 'app/' subdirectory.  (Tried ${APP_SOURCE_DIR})"
   exit 1
 fi
 
@@ -99,7 +97,7 @@ if [ -z "$ROOT_URL" ] && [ -n "$HEROKU_APP_NAME" ] ; then
   export ROOT_URL="https://${HEROKU_APP_NAME}.herokuapp.com"
 fi
 if [ -z "$ROOT_URL" ] ; then
-  echo "FATAL: ROOT_URL is not defined."
+  echo_with_time "FATAL: ROOT_URL is not defined."
   exit 1
 fi
 
@@ -141,15 +139,16 @@ HAS_SERVER_ONLY=`METEOR help build | grep -e '--server-only'`
 set -e
 if [ -n "$HAS_SERVER_ONLY" ] ; then
   SERVER_ONLY_FLAG='--server-only'
-else
-  SERVER_ONLY_FLAG=""
-fi
-# Remove the Android platform if we don't support the --server-only flag
-# (Meteor 1.2 and below).  iOS platform gets ignored properly.
-if [ -z "$SERVER_ONLY_FLAG" ]; then
+  # Remove platforms to force corodova skip
   echo_with_time "Attempting to remove android platform."
   METEOR remove-platform android || true
   echo_with_time "Moving on."
+
+  echo_with_time "Attempting to remove android platform."
+  METEOR remove-platform ios || true
+  echo_with_time "Moving on."
+else
+  SERVER_ONLY_FLAG=""
 fi
 
 # Identify the npm/node to use. We need to copy the node binary out to get the
@@ -165,7 +164,7 @@ METEOR_NODE=`METEOR node -e "process.stdout.write(process.execPath)"`
 METEOR_NPM="`dirname "$METEOR_NODE"`/npm"
 
 if [ -z "$METEOR_NPM" ] || [ -z "$METEOR_NODE" ] ; then
-  echo "FATAL: Can't find npm/node within meteor bundle. This is a bug. Please open an issue at https://github.com/AdmitHub/meteor-buildpack-horse.";
+  echo_with_time "FATAL: Can't find npm/node within meteor bundle. This is a bug. Please open an issue at https://github.com/AdmitHub/meteor-buildpack-horse.";
   exit 1
 fi
 
@@ -295,7 +294,7 @@ EOF
 
 # source scripts in 'extra' dir, if any.  Create them for custom stuff like
 # binary dependencies, additional environment settings, etc.
-echo_with_time "-----> Running extras"
+echo_with_time "Running extras"
 for file in `ls "$BUILDPACK_DIR"/extra | sort`; do
   . "$BUILDPACK_DIR"/extra/$file
 done
@@ -304,7 +303,7 @@ done
 # Clear cache after build is done
 #
 if [ -n "${BUILDPACK_CLEAR_CACHE+1}" ]; then
-  echo_with_time "-----> Clearing cache dir."
+  echo_with_time "Clearing cache dir."
   rm -rf $METEOR_DIR
 fi
 
