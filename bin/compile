@@ -7,7 +7,7 @@
 # fail fast.
 set -e
 # debug verbosely.
-#set -x
+set -x
 
 # Save the start time to calculate execution time
 START=$(date +%s)
@@ -121,6 +121,8 @@ if [ -n "$BUILDPACK_CLEAR_CACHE" ]; then
   echo_with_time "Clearing cache dir."
   rm -rf "$CACHE_DIR/*"
 fi
+echo_with_time "App Dir: $1"
+echo_with_time "Cache Dir: $2"
 
 #
 # Find the meteor app ($APP_SOURCE_DIR).
@@ -288,15 +290,21 @@ fi
 # may need devDependencies (e.g. webpack) in order to build the meteor app.
 echo_with_time "Check modules"
 if [ -e "$APP_SOURCE_DIR"/package.json ]; then
+  echo_with_time "Make cache dir"
   mkdir -p "$CACHE_DIR/meteor-dev-modules"
   if [ -n "$(ls -A $CACHE_DIR/meteor-dev-modules)" ]; then
     echo_with_time "Reusing development node_modules cache"
     mkdir -p "$APP_SOURCE_DIR/node_modules"
     mv "$CACHE_DIR/meteor-dev-modules/*" "$APP_SOURCE_DIR/node_modules"
   fi
+  echo_with_time "Meteor NPM Install"
   $METEOR_NPM install
+  echo_with_time "Done w/ NPM Install"
+  echo_with_time "Copy to cache"
   cp -a "$APP_SOURCE_DIR/node_modules/*" "$CACHE_DIR/meteor-dev-modules/"
+  echo_with_time "Done w/ cache copy"
 fi
+echo_with_time "Done with modules"
 
 echo_with_time "$APP_SOURCE_DIR"
 # INSTALL GIT PACKAGES
@@ -305,6 +313,7 @@ if [ -e "$APP_SOURCE_DIR"/git-packages.json ]; then
   $METEOR_NPM install -g mgp
   echo_with_time "Installing the packages"
   mgp --https
+  echo_with_time "Done w/ MGP"
 fi
 
 # Related to https://github.com/meteor/meteor/issues/2796 and
