@@ -270,7 +270,7 @@ if [ "$GIT_SSH_KEY" != "" ]; then
   echo_with_time "Setup GIT_SSH_KEY"
   echo_with_time $GIT_SSH_KEY
   #status "Detected SSH key for git.  launching ssh-agent and loading key"
-  $GIT_SSH_KEY | base64 --d > id_rsa
+  echo $GIT_SSH_KEY | base64 --d > id_rsa
   # launch ssh-agent, we'll use it to serve our ssh key
   # and kill it towards the end of the buildpack's run
   eval `ssh-agent -s`
