@@ -15,7 +15,7 @@ echo_with_time(){
   MSG=$1
   LEND=$(date +%s)
   LDIFF=$(($LEND - $START))
-  echo "-----> $(date -d@$LDIFF -u +%H:%M:%S) ----| $MSG"
+  echo "-----> $(date -u +%H:%M:%S) > $(date -d@$LDIFF -u +%H:%M:%S) ---- | $MSG"
 }
 
 # Load config vars into environment (from https://devcenter.heroku.com/articles/buildpack-api)
