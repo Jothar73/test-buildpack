@@ -301,6 +301,7 @@ if [ -e "$APP_SOURCE_DIR"/package.json ]; then
   $METEOR_NPM install
   echo_with_time "Done w/ NPM Install"
   echo_with_time "Copy to cache"
+  find -type d -printf '%d\t%P\n' | sort -r -nk1 | cut -f2-
   cp -a "$APP_SOURCE_DIR/node_modules/*" "$CACHE_DIR/meteor-dev-modules/"
   echo_with_time "Done w/ cache copy"
 fi
