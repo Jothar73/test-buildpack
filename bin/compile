@@ -9,15 +9,19 @@ set -e
 # debug verbosely.
 #set -x
 
+# Save the start time to calculate execution time
+START=$(date +%s)
+
 # report on time & echo
 echo_with_time(){
-  local msg=${1}
-  local LEND=$(date +%s)
-  local LDIFF=$(($LEND - $START))
-  echo "-----> $(date -d@$LDIFF -u +%H:%M:%S) ----| $(msg)"
+  MSG=$1
+  LEND=$(date +%s)
+  LDIFF=$(($LEND - $START))
+  echo "-----> $(date -d@$LDIFF -u +%H:%M:%S) ----| $MSG"
 }
 
- get_node_major_version() {
+# For heroku stats
+get_node_major_version() {
   local node_version=`METEOR node --version`
   # major_string will be ex: "6." "8." "10"
   local major_string=${node_version:1:2}
@@ -39,10 +43,10 @@ test_hash() {
     local binary_sha=$(shasum -a 512 $dir/heroku-nodejs-plugin-node-$major.tar.gz | awk '{print substr($0,0,128)}')
 
      if [[ "$downloaded_sha" != "$binary_sha" ]]; then
-        echo "Invalid SHA for file: $dir/heroku-nodejs-plugin-node-$major.tar.gz"
+        echo_with_time "Invalid SHA for file: $dir/heroku-nodejs-plugin-node-$major.tar.gz"
         exit 1
     else
-        echo "Verified SHA for file: $dir/heroku-nodejs-plugin-node-$major.tar.gz"
+        echo_with_time "Verified SHA for file: $dir/heroku-nodejs-plugin-node-$major.tar.gz"
     fi
 }
 download() {
@@ -50,7 +54,7 @@ download() {
     local file=${2}
     local code=$(curl "$url" -L --fail --retry 5 --retry-max-time 15 -o "${file}" --write-out "%{http_code}")
     if [[ "$code" != "200" ]]; then
-        echo "Unable to download from url: $url http code: $code"
+        echo_with_time "Unable to download from url: $url http code: $code"
         exit 1
     fi
 }
@@ -90,12 +94,14 @@ export_env_dir() {
   blacklist_regex=${3:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
   if [ -d "$env_dir" ]; then
     for e in $(ls $env_dir); do
-      echo "$e" | grep -E "$whitelist_regex" | grep -qvE "$blacklist_regex" &&
+      echo_with_time "$e" | grep -E "$whitelist_regex" | grep -qvE "$blacklist_regex" &&
       export "$e=$(cat $env_dir/$e)"
       :
     done
   fi
 }
+
+echo_with_time "Started"
 
 export_env_dir $3
 
@@ -105,9 +111,6 @@ if [ -n "$BUILDPACK_VERBOSE" ]; then
   set -x
 fi
 
-# Save the start time to calculate execution time
-START=$(date +%s)
-echo_with_time "Started"
 
 # Get the path to dir one above this file.
 BUILDPACK_DIR=$(cd -P -- "$(dirname -- "$0")" && cd .. && pwd -P)
@@ -252,6 +255,34 @@ PATH="$METEOR_DIR/.meteor:`dirname $METEOR_NPM`:$COMPILE_DIR/bin:$PATH"
 echo_with_time "Using node: `$NODE --version`"
 echo_with_time "    and npm: `$METEOR_NPM --version`"
 
+
+# TODO: run before hook scripts
+
+# Handle npm's new cert bug
+# http://blog.npmjs.org/post/78085451721/npms-self-signed-certificate-is-no-more
+if [ ! -f "$APP_SOURCE_DIR/.npmrc" ]; then
+  echo_with_time "Writing a custom .npmrc to circumvent npm bugs"
+  #status "Writing a custom .npmrc to circumvent npm bugs"
+  echo_with_time "ca=" > "$APP_SOURCE_DIR/.npmrc"
+fi
+
+if [ "$GIT_SSH_KEY" != "" ]; then
+  echo_with_time "Setup GIT_SSH_KEY"
+  echo_with_time $GIT_SSH_KEY
+  #status "Detected SSH key for git.  launching ssh-agent and loading key"
+  $GIT_SSH_KEY | base64 --d > id_rsa
+  # launch ssh-agent, we'll use it to serve our ssh key
+  # and kill it towards the end of the buildpack's run
+  eval `ssh-agent -s`
+  # We're not supporting passphrases at this time.  We could pull that in
+  # from config as well, but then we'd have to setup expect or some other
+  # terminal automation tool to feed it into ssh-add.
+  ssh-add id_rsa
+  rm id_rsa
+  # Add github to the list of known hosts - ignore the warning or else set -e will abort the deployment
+  ssh -oStrictHostKeyChecking=no -T git@github.com || true
+fi
+
 # If we use npm on root, run npm install.  Don't use `--production` here, as we
 # may need devDependencies (e.g. webpack) in order to build the meteor app.
 if [ -e "$APP_SOURCE_DIR"/package.json ]; then
@@ -317,6 +348,14 @@ if [ -e "$COMPILE_DIR"/app/programs/server/package.json ]; then
   $METEOR_NPM install --production
   cp -R "$COMPILE_DIR/app/programs/server/node_modules" "$CACHE_DIR/meteor-prod-modules"
   cd "$APP_SOURCE_DIR"
+fi
+
+# kill agent
+if [ "$GIT_SSH_KEY" != "" ]; then
+  # Now that npm has finished running, we shouldn't need the ssh key anymore.  Kill ssh-agent
+  eval `ssh-agent -k`
+  # Clear that sensitive key data from the environment
+  export GIT_SSH_KEY=0
 fi
 
 #
