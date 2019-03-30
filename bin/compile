@@ -294,15 +294,15 @@ if [ -e "$APP_SOURCE_DIR"/package.json ]; then
   mkdir -p "$CACHE_DIR/meteor-dev-modules"
   if [ -n "$(ls -A $CACHE_DIR/meteor-dev-modules)" ]; then
     echo_with_time "Reusing development node_modules cache"
-    mkdir -p "$APP_SOURCE_DIR/node_modules"
-    mv "$CACHE_DIR/meteor-dev-modules/*" "$APP_SOURCE_DIR/node_modules"
+    mkdir -p "node_modules"
+    mv "$CACHE_DIR/meteor-dev-modules/*" "node_modules"
   fi
   echo_with_time "Meteor NPM Install"
   $METEOR_NPM install
   echo_with_time "Done w/ NPM Install"
   echo_with_time "Copy to cache"
-  find -type d -printf '%d\t%P\n' | sort -r -nk1 | cut -f2-
-  cp -a "$APP_SOURCE_DIR/node_modules/*" "$CACHE_DIR/meteor-dev-modules/"
+  #find -type d -printf '%d\t%P\n' | sort -r -nk1 | cut -f2-
+  cp -a "node_modules/*" "$CACHE_DIR/meteor-dev-modules/"
   echo_with_time "Done w/ cache copy"
 fi
 echo_with_time "Done with modules"
