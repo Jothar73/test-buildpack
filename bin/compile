@@ -263,12 +263,12 @@ echo_with_time "    and npm: `$METEOR_NPM --version`"
 if [ ! -f "$APP_SOURCE_DIR/.npmrc" ]; then
   echo_with_time "Writing a custom .npmrc to circumvent npm bugs"
   #status "Writing a custom .npmrc to circumvent npm bugs"
-  echo_with_time "ca=" > "$APP_SOURCE_DIR/.npmrc"
+  echo "ca=" > "$APP_SOURCE_DIR/.npmrc"
+  echo_with_time "Done"
 fi
 
 if [ "$GIT_SSH_KEY" != "" ]; then
   echo_with_time "Setup GIT_SSH_KEY"
-  echo_with_time $GIT_SSH_KEY
   #status "Detected SSH key for git.  launching ssh-agent and loading key"
   echo $GIT_SSH_KEY | base64 --d > id_rsa
   # launch ssh-agent, we'll use it to serve our ssh key
@@ -281,10 +281,12 @@ if [ "$GIT_SSH_KEY" != "" ]; then
   rm id_rsa
   # Add github to the list of known hosts - ignore the warning or else set -e will abort the deployment
   ssh -oStrictHostKeyChecking=no -T git@github.com || true
+  echo_with_time "Connected"
 fi
 
 # If we use npm on root, run npm install.  Don't use `--production` here, as we
 # may need devDependencies (e.g. webpack) in order to build the meteor app.
+echo_with_time "Check modules"
 if [ -e "$APP_SOURCE_DIR"/package.json ]; then
   mkdir -p "$CACHE_DIR/meteor-dev-modules"
   if [ -n "$(ls -A $CACHE_DIR/meteor-dev-modules)" ]; then
@@ -296,6 +298,7 @@ if [ -e "$APP_SOURCE_DIR"/package.json ]; then
   cp -a "$APP_SOURCE_DIR/node_modules/*" "$CACHE_DIR/meteor-dev-modules/"
 fi
 
+echo_with_time "$APP_SOURCE_DIR"
 # INSTALL GIT PACKAGES
 if [ -e "$APP_SOURCE_DIR"/git-packages.json ]; then
   echo_with_time "Installing mgp"
