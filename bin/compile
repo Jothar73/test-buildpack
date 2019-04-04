@@ -188,6 +188,17 @@ if [ ! -f "$APP_SOURCE_DIR/.npmrc" ]; then
   echo "ca=" > "$APP_SOURCE_DIR/.npmrc"
 fi
 
+# REMOVE heavy Packages
+if [ -n "${BUILDPACK_REMOVE_METEOR_CANDY}" ]; then
+  echo_with_time "Attempting to remove Meteor Candy Config"
+  METEOR remove meteor-candy-config
+  echo_with_time "Attempting to remove Meteor Candy Blaze"
+  METEOR remove meteor-candy-blaze
+  echo_with_time "Attempting to remove Meteor Candy Admin"
+  METEOR remove meteor-candy-admin
+  echo_with_time "Moving on."
+fi
+
 if [ "$GIT_SSH_KEY" != "" ]; then
   echo_with_time "Detected SSH key for git"
   #status "Detected SSH key for git.  launching ssh-agent and loading key"
@@ -244,17 +255,6 @@ if [ -n "${BUILDPACK_PRELAUNCH_METEOR+1}" ]; then
   HOME=$METEOR_DIR timeout -s9 60 $METEOR_DIR/.meteor/meteor --settings settings.json || true
 fi
 echo_with_time "BUILDPACK_PRELAUNCH_METEOR - Complete"
-
-
-if [ -n "${BUILDPACK_REMOVE_METEOR_CANDY}" ]; then
-  echo_with_time "Attempting to remove Meteor Candy Config"
-  METEOR remove meteor-candy-config
-  echo_with_time "Attempting to remove Meteor Candy Blaze"
-  METEOR remove meteor-candy-blaze
-  echo_with_time "Attempting to remove Meteor Candy Admin"
-  METEOR remove meteor-candy-admin
-  echo_with_time "Moving on."
-fi
 
 # Now on to bundling. Don't put the bundle in $APP_CHECKOUT_DIR during
 # bundling, or it will recurse, trying to bundle up its own bundling.
