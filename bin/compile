@@ -151,16 +151,6 @@ else
   SERVER_ONLY_FLAG=""
 fi
 
-if [ -n "${BUILDPACK_REMOVE_METEOR_CANDY}" ]; then
-  echo_with_time "Attempting to remove Meteor Candy Blaze"
-  METEOR remove meteor-candy-blaze
-  echo_with_time "Attempting to remove Meteor Candy Admin"
-  METEOR remove meteor-candy-admin
-  echo_with_time "Attempting to remove Meteor Candy Config"
-  METEOR remove meteor-candy-config
-  echo_with_time "Moving on."
-fi
-
 # Identify the npm/node to use. We need to copy the node binary out to get the
 # correct version in the built slug (e.g. 0.10.x for Meteor<1.4, 4.x for
 # Meteor>=1.4).  We can't copy the whole meteor world because that's too large
@@ -254,6 +244,17 @@ if [ -n "${BUILDPACK_PRELAUNCH_METEOR+1}" ]; then
   HOME=$METEOR_DIR timeout -s9 60 $METEOR_DIR/.meteor/meteor --settings settings.json || true
 fi
 echo_with_time "BUILDPACK_PRELAUNCH_METEOR - Complete"
+
+
+if [ -n "${BUILDPACK_REMOVE_METEOR_CANDY}" ]; then
+  echo_with_time "Attempting to remove Meteor Candy Config"
+  METEOR remove meteor-candy-config
+  echo_with_time "Attempting to remove Meteor Candy Blaze"
+  METEOR remove meteor-candy-blaze
+  echo_with_time "Attempting to remove Meteor Candy Admin"
+  METEOR remove meteor-candy-admin
+  echo_with_time "Moving on."
+fi
 
 # Now on to bundling. Don't put the bundle in $APP_CHECKOUT_DIR during
 # bundling, or it will recurse, trying to bundle up its own bundling.
