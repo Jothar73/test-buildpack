@@ -218,17 +218,6 @@ if [ -e "$APP_SOURCE_DIR"/package.json ]; then
 fi
 echo_with_time "Install Dependencies - Complete"
 
-# REMOVE heavy Packages
-if [ -n "${BUILDPACK_REMOVE_METEOR_CANDY}" ]; then
-  echo_with_time "Attempting to remove Meteor Candy Config"
-  METEOR remove meteor-candy-config
-  echo_with_time "Attempting to remove Meteor Candy Blaze"
-  METEOR remove meteor-candy-blaze
-  echo_with_time "Attempting to remove Meteor Candy Admin"
-  METEOR remove meteor-candy-admin
-  echo_with_time "Moving on."
-fi
-
 echo_with_time "Install Packages - Start"
 if [ -e "$APP_SOURCE_DIR"/git-packages.json ]; then
   echo_with_time "Installing mgp"
@@ -241,6 +230,17 @@ if [ -e "$APP_SOURCE_DIR"/git-packages.json ]; then
   fi
 fi
 echo_with_time "Install Packages - Complete"
+
+# REMOVE heavy Packages
+if [ -n "${BUILDPACK_REMOVE_METEOR_CANDY}" ]; then
+  echo_with_time "Attempting to remove Meteor Candy Config"
+  METEOR remove meteor-candy-config
+  echo_with_time "Attempting to remove Meteor Candy Blaze"
+  METEOR remove meteor-candy-blaze
+  echo_with_time "Attempting to remove Meteor Candy Admin"
+  METEOR remove meteor-candy-admin
+  echo_with_time "Moving on."
+fi
 
 # Related to https://github.com/meteor/meteor/issues/2796 and
 # https://github.com/meteor/meteor/issues/2606.  Some packages only build their
