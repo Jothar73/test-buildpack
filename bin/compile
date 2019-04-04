@@ -152,10 +152,12 @@ else
 fi
 
 if [ -n "${BUILDPACK_REMOVE_METEOR_CANDY}" ]; then
-  echo_with_time "Attempting to remove Meteor Candy"
-  METEOR remove meteor-candy-config
+  echo_with_time "Attempting to remove Meteor Candy Blaze"
   METEOR remove meteor-candy-blaze
+  echo_with_time "Attempting to remove Meteor Candy Admin"
   METEOR remove meteor-candy-admin
+  echo_with_time "Attempting to remove Meteor Candy Config"
+  METEOR remove meteor-candy-config
   echo_with_time "Moving on."
 fi
 
