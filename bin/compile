@@ -234,11 +234,11 @@ echo_with_time "Install Packages - Complete"
 # REMOVE heavy Packages
 if [ -n "${BUILDPACK_REMOVE_METEOR_CANDY}" ]; then
   echo_with_time "Attempting to remove Meteor Candy Config"
-  METEOR remove meteor-candy-config
+  METEOR remove meteor-candy-config || true
   echo_with_time "Attempting to remove Meteor Candy Blaze"
-  METEOR remove meteor-candy-blaze
+  METEOR remove meteor-candy-blaze || true
   echo_with_time "Attempting to remove Meteor Candy Admin"
-  METEOR remove meteor-candy-admin
+  METEOR remove meteor-candy-admin || true
   echo_with_time "Moving on."
 fi
 
